@@ -24,21 +24,21 @@ class GoogleSheetsConnector:
     which is the most secure and reliable method for server-to-server communication.
     """
     
-    def __init__(self, credentials_source):
+    def __init__(self, credentials_path: str):
         """
         Initialize the Google Sheets connector with service account credentials.
         
         WHY: Service accounts are the recommended way for server applications to access
         Google APIs without user interaction. They provide secure, programmatic access.
         
-        HOW: We load the service account credentials from either a JSON file or a
-        dictionary (for Streamlit secrets) and create the necessary API clients.
+        HOW: We load the service account credentials from a JSON file and create
+        the necessary API clients for both gspread (simpler operations) and the
+        Google Sheets API (more advanced operations).
         
         Args:
-            credentials_source: Either a path to the service account JSON file (str)
-                              or a dictionary containing the credentials (dict)
+            credentials_path (str): Path to the service account JSON credentials file
         """
-        self.credentials_source = credentials_source
+        self.credentials_path = credentials_path
         self.service = None
         self.gc = None
         self._authenticate()
@@ -64,22 +64,12 @@ class GoogleSheetsConnector:
             ]
             
             # Load service account credentials
-            # WHY: Service account credentials can be from file or dict (Streamlit secrets)
-            # HOW: We check the type and use appropriate method to load credentials
-            if isinstance(self.credentials_source, str):
-                # File path provided
-                credentials = Credentials.from_service_account_file(
-                    self.credentials_source, 
-                    scopes=scopes
-                )
-            elif isinstance(self.credentials_source, dict):
-                # Dictionary provided (Streamlit secrets)
-                credentials = Credentials.from_service_account_info(
-                    self.credentials_source, 
-                    scopes=scopes
-                )
-            else:
-                raise ValueError("Credentials source must be either a file path (str) or credentials dict")
+            # WHY: Service account credentials are stored in a JSON file for security
+            # HOW: We use Google's OAuth2 library to load and validate the credentials
+            credentials = Credentials.from_service_account_file(
+                self.credentials_path, 
+                scopes=scopes
+            )
             
             # Create Google Sheets API service
             # WHY: The Google Sheets API service provides programmatic access to sheets
