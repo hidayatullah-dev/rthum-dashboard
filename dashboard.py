@@ -97,14 +97,29 @@ def load_data():
             not should_refresh_data()):
             return st.session_state.data_cache
         
-        credentials_path = "service_account_credentials.json"
-        
-        if not os.path.exists(credentials_path):
-            st.error(f"❌ Service account credentials file not found: {credentials_path}")
-            return None
-        
-        connector = GoogleSheetsConnector(credentials_path)
-        df = connector.get_sheet_data(SHEET_ID, WORKSHEET_NAME)
+        # Try to use Streamlit secrets first (for cloud deployment)
+        if 'gcp_service_account' in st.secrets:
+            # Create credentials from Streamlit secrets
+            import json
+            from google.oauth2.service_account import Credentials
+            
+            # Convert secrets to credentials format
+            credentials_info = dict(st.secrets['gcp_service_account'])
+            credentials = Credentials.from_service_account_info(credentials_info)
+            
+            # Create connector with credentials
+            connector = GoogleSheetsConnector.from_credentials(credentials)
+            df = connector.get_sheet_data(SHEET_ID, WORKSHEET_NAME)
+        else:
+            # Fallback to local file (for local development)
+            credentials_path = "service_account_credentials.json"
+            
+            if not os.path.exists(credentials_path):
+                st.error(f"❌ Service account credentials not found. Please add them to Streamlit secrets or place {credentials_path} in the project directory.")
+                return None
+            
+            connector = GoogleSheetsConnector(credentials_path)
+            df = connector.get_sheet_data(SHEET_ID, WORKSHEET_NAME)
         
         if df is not None:
             df = clean_and_enhance_data(df)

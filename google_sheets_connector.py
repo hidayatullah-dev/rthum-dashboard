@@ -24,24 +24,45 @@ class GoogleSheetsConnector:
     which is the most secure and reliable method for server-to-server communication.
     """
     
-    def __init__(self, credentials_path: str):
+    def __init__(self, credentials_path: str = None, credentials: Credentials = None):
         """
         Initialize the Google Sheets connector with service account credentials.
         
         WHY: Service accounts are the recommended way for server applications to access
         Google APIs without user interaction. They provide secure, programmatic access.
         
-        HOW: We load the service account credentials from a JSON file and create
-        the necessary API clients for both gspread (simpler operations) and the
-        Google Sheets API (more advanced operations).
+        HOW: We load the service account credentials from a JSON file or use provided
+        credentials and create the necessary API clients for both gspread (simpler operations) 
+        and the Google Sheets API (more advanced operations).
         
         Args:
-            credentials_path (str): Path to the service account JSON credentials file
+            credentials_path (str, optional): Path to the service account JSON credentials file
+            credentials (Credentials, optional): Pre-loaded credentials object
         """
         self.credentials_path = credentials_path
+        self.credentials = credentials
         self.service = None
         self.gc = None
         self._authenticate()
+    
+    @classmethod
+    def from_credentials(cls, credentials: Credentials):
+        """
+        Create a GoogleSheetsConnector instance from pre-loaded credentials.
+        
+        WHY: This allows using credentials from Streamlit secrets or other sources
+        without needing a file path.
+        
+        HOW: We create a new instance with the provided credentials object.
+        
+        Args:
+            credentials (Credentials): Pre-loaded Google credentials
+            
+        Returns:
+            GoogleSheetsConnector: New connector instance
+        """
+        instance = cls(credentials=credentials)
+        return instance
     
     def _authenticate(self):
         """
@@ -50,9 +71,9 @@ class GoogleSheetsConnector:
         WHY: Authentication is required before we can access any Google Sheets data.
         We use OAuth2 service account flow which is ideal for automated applications.
         
-        HOW: We create credentials from the service account JSON file and use them
-        to build both the Google Sheets API service and gspread client. We define
-        the scopes needed for reading and writing to Google Sheets.
+        HOW: We create credentials from the service account JSON file or use provided
+        credentials and use them to build both the Google Sheets API service and gspread client. 
+        We define the scopes needed for reading and writing to Google Sheets.
         """
         try:
             # Define the scopes needed for Google Sheets access
@@ -64,12 +85,19 @@ class GoogleSheetsConnector:
             ]
             
             # Load service account credentials
-            # WHY: Service account credentials are stored in a JSON file for security
-            # HOW: We use Google's OAuth2 library to load and validate the credentials
-            credentials = Credentials.from_service_account_file(
-                self.credentials_path, 
-                scopes=scopes
-            )
+            # WHY: Service account credentials can come from a file or be provided directly
+            # HOW: We check if credentials are provided, otherwise load from file
+            if self.credentials is not None:
+                # Use provided credentials (from Streamlit secrets)
+                credentials = self.credentials
+                if hasattr(credentials, 'with_scopes'):
+                    credentials = credentials.with_scopes(scopes)
+            else:
+                # Load from file (local development)
+                credentials = Credentials.from_service_account_file(
+                    self.credentials_path, 
+                    scopes=scopes
+                )
             
             # Create Google Sheets API service
             # WHY: The Google Sheets API service provides programmatic access to sheets
@@ -83,7 +111,7 @@ class GoogleSheetsConnector:
             
         except Exception as e:
             st.error(f"Authentication failed: {str(e)}")
-            st.error("Please ensure your service account JSON file is valid and has the correct permissions.")
+            st.error("Please ensure your service account credentials are valid and have the correct permissions.")
             raise
     
     def get_sheet_data(self, sheet_id: str, worksheet_name: str = "Sheet1") -> Optional[pd.DataFrame]:
