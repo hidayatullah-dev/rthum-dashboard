@@ -122,15 +122,7 @@ def load_data():
             df = connector.get_sheet_data(SHEET_ID, WORKSHEET_NAME)
         
         if df is not None:
-            # Debug: Show raw data info
-            st.info(f"📊 Raw data loaded: {len(df)} rows, {len(df.columns)} columns")
-            st.write("**Available columns:**", list(df.columns))
-            
             df = clean_and_enhance_data(df)
-            
-            # Debug: Show cleaned data info
-            st.info(f"🧹 After cleaning: {len(df)} rows, {len(df.columns)} columns")
-            
             st.session_state.data_cache = df
             st.session_state.cache_timestamp = datetime.now()
             st.session_state.last_refresh = datetime.now()
@@ -296,29 +288,14 @@ def create_advanced_metrics(df):
 def create_safe_chart(df, chart_type, x_col, y_col, color_col=None, size_col=None, title="Custom Chart"):
     """Create a safe chart that handles NaN values properly."""
     try:
-        # Debug: Show what we're working with
-        st.write(f"🔍 Creating chart: {title}")
-        st.write(f"📊 Original data: {len(df)} rows")
-        st.write(f"📋 Columns: {list(df.columns)}")
-        st.write(f"🎯 X column: {x_col}, Y column: {y_col}")
-        
         # Check if columns exist
-        if x_col not in df.columns:
-            st.error(f"❌ X column '{x_col}' not found in data")
-            return None
-        if y_col not in df.columns:
-            st.error(f"❌ Y column '{y_col}' not found in data")
+        if x_col not in df.columns or y_col not in df.columns:
             return None
         
         # Clean data - remove rows with NaN values in required columns
         df_clean = df.dropna(subset=[x_col, y_col])
         
-        st.write(f"🧹 After cleaning: {len(df_clean)} rows")
-        
         if df_clean.empty:
-            st.warning("⚠️ No valid data to plot after cleaning")
-            st.write("**Sample of original data:**")
-            st.write(df.head())
             return None
         
         # Handle size column for scatter plots
