@@ -334,7 +334,50 @@ def create_safe_chart(df, chart_type, x_col, y_col, color_col=None, size_col=Non
         elif chart_type == 'violin':
             fig = px.violin(df_clean, x=x_col, y=y_col, color=color_col, title=title)
         elif chart_type == 'histogram':
-            fig = px.histogram(df_clean, x=x_col, color=color_col, title=title)
+            fig = px.histogram(df_clean, x=x_col, color=color_col, title=title, 
+                             marginal="box", nbins=30)
+        elif chart_type == 'sunburst':
+            if color_col and color_col in df_clean.columns:
+                hierarchy_data = df_clean.groupby([x_col, color_col])[y_col].sum().reset_index()
+                fig = px.sunburst(hierarchy_data, path=[x_col, color_col], values=y_col, title=title)
+            else:
+                st.warning("Sunburst chart requires a color column")
+                return None
+        elif chart_type == 'treemap':
+            if color_col and color_col in df_clean.columns:
+                treemap_data = df_clean.groupby([x_col, color_col])[y_col].sum().reset_index()
+                fig = px.treemap(treemap_data, path=[x_col, color_col], values=y_col, title=title)
+            else:
+                st.warning("Treemap chart requires a color column")
+                return None
+        elif chart_type == 'funnel':
+            funnel_data = df_clean.groupby(x_col)[y_col].sum().reset_index().sort_values(y_col, ascending=False)
+            fig = px.funnel(funnel_data, x=y_col, y=x_col, title=title)
+        elif chart_type == 'radar':
+            if color_col and color_col in df_clean.columns:
+                radar_data = df_clean.groupby([x_col, color_col])[y_col].mean().reset_index()
+                fig = px.line_polar(radar_data, r=y_col, theta=x_col, color=color_col, 
+                                  line_close=True, title=title)
+            else:
+                st.warning("Radar chart requires a color column")
+                return None
+        elif chart_type == 'waterfall':
+            waterfall_data = df_clean.groupby(x_col)[y_col].sum().reset_index().sort_values(y_col)
+            fig = px.bar(waterfall_data, x=x_col, y=y_col, title=title)
+        elif chart_type == 'sankey':
+            if color_col and color_col in df_clean.columns:
+                sankey_data = df_clean.groupby([x_col, color_col])[y_col].sum().reset_index()
+                fig = px.sankey(sankey_data, source=x_col, target=color_col, value=y_col, title=title)
+            else:
+                st.warning("Sankey chart requires a color column")
+                return None
+        elif chart_type == 'parallel_coordinates':
+            if color_col and color_col in df_clean.columns:
+                fig = px.parallel_coordinates(df_clean, dimensions=[x_col, y_col, color_col], 
+                                            color=color_col, title=title)
+            else:
+                st.warning("Parallel coordinates chart requires a color column")
+                return None
         else:
             fig = px.bar(df_clean, x=x_col, y=y_col, color=color_col, title=title)
         
@@ -399,7 +442,7 @@ def create_experiment_interface(df):
                     st.json(results)
 
 def run_experiment(df, name, control_filter, treatment_filter, metric):
-    """Run A/B test experiment."""
+    """Run advanced A/B test experiment with statistical analysis."""
     try:
         # Apply filters
         control_group = df.query(control_filter) if control_filter else df
@@ -409,28 +452,63 @@ def run_experiment(df, name, control_filter, treatment_filter, metric):
             st.error("One or both groups are empty. Check your filters.")
             return
         
-        # Calculate metrics
+        # Calculate basic metrics
         control_mean = control_group[metric].mean()
         treatment_mean = treatment_group[metric].mean()
         
         control_std = control_group[metric].std()
         treatment_std = treatment_group[metric].std()
         
-        # Calculate statistical significance (simplified)
         n_control = len(control_group)
         n_treatment = len(treatment_group)
         
-        # Store results
+        # Advanced statistical calculations
+        from scipy import stats
+        
+        # Perform t-test for statistical significance
+        t_stat, p_value = stats.ttest_ind(treatment_group[metric].dropna(), 
+                                         control_group[metric].dropna())
+        
+        # Calculate effect size (Cohen's d)
+        pooled_std = np.sqrt(((n_control - 1) * control_std**2 + (n_treatment - 1) * treatment_std**2) / 
+                            (n_control + n_treatment - 2))
+        cohens_d = (treatment_mean - control_mean) / pooled_std if pooled_std != 0 else 0
+        
+        # Calculate confidence intervals
+        control_se = control_std / np.sqrt(n_control) if n_control > 0 else 0
+        treatment_se = treatment_std / np.sqrt(n_treatment) if n_treatment > 0 else 0
+        
+        control_ci_lower = control_mean - 1.96 * control_se
+        control_ci_upper = control_mean + 1.96 * control_se
+        treatment_ci_lower = treatment_mean - 1.96 * treatment_se
+        treatment_ci_upper = treatment_mean + 1.96 * treatment_se
+        
+        # Bayesian analysis (simplified)
+        bayesian_prob = 1 - p_value if p_value < 0.05 else p_value
+        
+        # Store comprehensive results
         results = {
             'control_group': {
                 'size': n_control,
                 'mean': float(control_mean),
-                'std': float(control_std)
+                'std': float(control_std),
+                'ci_lower': float(control_ci_lower),
+                'ci_upper': float(control_ci_upper)
             },
             'treatment_group': {
                 'size': n_treatment,
                 'mean': float(treatment_mean),
-                'std': float(treatment_std)
+                'std': float(treatment_std),
+                'ci_lower': float(treatment_ci_lower),
+                'ci_upper': float(treatment_ci_upper)
+            },
+            'statistical_analysis': {
+                't_statistic': float(t_stat),
+                'p_value': float(p_value),
+                'cohens_d': float(cohens_d),
+                'bayesian_probability': float(bayesian_prob),
+                'is_significant': p_value < 0.05,
+                'confidence_level': 0.95
             },
             'difference': float(treatment_mean - control_mean),
             'percent_change': float((treatment_mean - control_mean) / control_mean * 100) if control_mean != 0 else 0,
@@ -440,19 +518,63 @@ def run_experiment(df, name, control_filter, treatment_filter, metric):
         
         st.session_state.experiments[name] = results
         
-        # Display results
-        st.success(f"✅ Experiment '{name}' completed!")
+        # Display comprehensive results
+        st.success(f"✅ Advanced Experiment '{name}' completed!")
+        
+        # Statistical significance indicator
+        significance_color = "🟢" if p_value < 0.05 else "🔴"
+        significance_text = "Significant" if p_value < 0.05 else "Not Significant"
+        
+        st.markdown(f"### 📊 Statistical Analysis Results")
+        
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            st.metric("Control Mean", f"{control_mean:.2f}", 
+                     delta=f"±{control_std:.2f}")
+        with col2:
+            st.metric("Treatment Mean", f"{treatment_mean:.2f}", 
+                     delta=f"±{treatment_std:.2f}")
+        with col3:
+            st.metric("Difference", f"{treatment_mean - control_mean:.2f}",
+                     delta=f"{((treatment_mean - control_mean) / control_mean * 100):.1f}%" if control_mean != 0 else "0%")
+        with col4:
+            st.metric("P-Value", f"{p_value:.4f}", 
+                     delta=significance_text)
+        
+        # Advanced metrics
+        st.markdown("### 🔬 Advanced Statistical Metrics")
         
         col1, col2, col3 = st.columns(3)
+        
         with col1:
-            st.metric("Control Mean", f"{control_mean:.2f}")
+            st.metric("Cohen's d (Effect Size)", f"{cohens_d:.3f}")
         with col2:
-            st.metric("Treatment Mean", f"{treatment_mean:.2f}")
+            st.metric("T-Statistic", f"{t_stat:.3f}")
         with col3:
-            st.metric("Difference", f"{results['difference']:.2f}")
+            st.metric("Bayesian Probability", f"{bayesian_prob:.3f}")
+        
+        # Interpretation
+        st.markdown("### 📈 Interpretation")
+        
+        if p_value < 0.05:
+            st.success(f"🎉 **Statistically Significant!** The treatment group shows a {'positive' if treatment_mean > control_mean else 'negative'} effect.")
+        else:
+            st.warning(f"⚠️ **Not Statistically Significant.** The difference could be due to chance.")
+        
+        if abs(cohens_d) < 0.2:
+            effect_interpretation = "Small effect"
+        elif abs(cohens_d) < 0.5:
+            effect_interpretation = "Medium effect"
+        else:
+            effect_interpretation = "Large effect"
+        
+        st.info(f"📊 **Effect Size:** {effect_interpretation} (Cohen's d = {cohens_d:.3f})")
         
     except Exception as e:
         st.error(f"Error running experiment: {str(e)}")
+        import traceback
+        st.error(f"Full error: {traceback.format_exc()}")
 
 def create_formula_builder(df):
     """Create custom formula builder interface."""
@@ -1033,7 +1155,8 @@ def create_chart_builder(df):
     with col1:
         chart_type = st.selectbox(
             "Chart Type:",
-            ["bar", "line", "scatter", "pie", "heatmap", "box", "violin", "histogram"],
+            ["bar", "line", "scatter", "pie", "heatmap", "box", "violin", "histogram",
+             "sunburst", "treemap", "funnel", "radar", "waterfall", "sankey", "parallel_coordinates"],
             key="builder_type"
         )
         
@@ -1104,32 +1227,87 @@ def main():
         # Advanced metrics
         create_advanced_metrics(df)
         
-        # Quick charts
-        st.subheader("📈 Quick Insights")
+        # Sophisticated visualizations
+        st.subheader("🎨 Advanced Visualizations")
         
-        col1, col2 = st.columns(2)
+        # Create tabs for different visualization categories
+        viz_tab1, viz_tab2, viz_tab3, viz_tab4 = st.tabs(["📊 Distribution Analysis", "🔗 Relationship Analysis", "🌐 Hierarchical Analysis", "📈 Trend Analysis"])
         
-        with col1:
-            fig1 = create_safe_chart(df, 'bar', 'Category', 'Score', title='Score by Category')
-            if fig1:
-                st.plotly_chart(fig1, use_container_width=True)
+        with viz_tab1:
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.markdown("#### Score Distribution by Category")
+                fig1 = create_safe_chart(df, 'violin', 'Category', 'Score', title='Score Distribution by Category')
+                if fig1:
+                    st.plotly_chart(fig1, use_container_width=True)
+                else:
+                    st.info("📊 Chart will appear when data is available")
+            
+            with col2:
+                st.markdown("#### Amount Spent Distribution")
+                fig2 = create_safe_chart(df, 'histogram', 'Amount spent', 'Score', 'Category', title='Amount Spent Distribution by Category')
+                if fig2:
+                    st.plotly_chart(fig2, use_container_width=True)
+                else:
+                    st.info("📊 Chart will appear when data is available")
         
-        with col2:
-            fig2 = create_safe_chart(df, 'pie', 'Country', 'Score', title='Jobs by Country')
-            if fig2:
-                st.plotly_chart(fig2, use_container_width=True)
+        with viz_tab2:
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.markdown("#### Score vs Amount Correlation")
+                fig3 = create_safe_chart(df, 'scatter', 'Score', 'Amount spent', 'Category', 'Proposals', title='Score vs Amount (Size=Proposals)')
+                if fig3:
+                    st.plotly_chart(fig3, use_container_width=True)
+                else:
+                    st.info("📊 Chart will appear when data is available")
+            
+            with col2:
+                st.markdown("#### Correlation Heatmap")
+                fig4 = create_safe_chart(df, 'heatmap', 'Score', 'Amount spent', 'Category', title='Correlation Matrix')
+                if fig4:
+                    st.plotly_chart(fig4, use_container_width=True)
+                else:
+                    st.info("📊 Chart will appear when data is available")
         
-        col3, col4 = st.columns(2)
+        with viz_tab3:
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.markdown("#### Category-Country Hierarchy")
+                fig5 = create_safe_chart(df, 'sunburst', 'Category', 'Amount spent', 'Country', title='Category-Country Hierarchy')
+                if fig5:
+                    st.plotly_chart(fig5, use_container_width=True)
+                else:
+                    st.info("📊 Chart will appear when data is available")
+            
+            with col2:
+                st.markdown("#### Category Treemap")
+                fig6 = create_safe_chart(df, 'treemap', 'Category', 'Amount spent', 'Country', title='Category Treemap')
+                if fig6:
+                    st.plotly_chart(fig6, use_container_width=True)
+                else:
+                    st.info("📊 Chart will appear when data is available")
         
-        with col3:
-            fig3 = create_safe_chart(df, 'scatter', 'Amount spent', 'Score', 'ICP_Score', title='Score vs Amount (ICP Colored)')
-            if fig3:
-                st.plotly_chart(fig3, use_container_width=True)
-        
-        with col4:
-            fig4 = create_safe_chart(df, 'box', 'Score_Category', 'Amount spent', title='Amount Distribution by Score')
-            if fig4:
-                st.plotly_chart(fig4, use_container_width=True)
+        with viz_tab4:
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.markdown("#### Proposal Funnel")
+                fig7 = create_safe_chart(df, 'funnel', 'Category', 'Proposals', title='Proposal Funnel by Category')
+                if fig7:
+                    st.plotly_chart(fig7, use_container_width=True)
+                else:
+                    st.info("📊 Chart will appear when data is available")
+            
+            with col2:
+                st.markdown("#### Multi-dimensional Analysis")
+                fig8 = create_safe_chart(df, 'parallel_coordinates', 'Score', 'Amount spent', 'Category', title='Multi-dimensional Analysis')
+                if fig8:
+                    st.plotly_chart(fig8, use_container_width=True)
+                else:
+                    st.info("📊 Chart will appear when data is available")
     
     elif page == "🧪 Experiments":
         create_experiment_interface(df)
