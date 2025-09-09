@@ -112,14 +112,14 @@ def load_data():
             df = connector.get_sheet_data(SHEET_ID, WORKSHEET_NAME)
         else:
             # Fallback to local file (for local development)
-        credentials_path = "service_account_credentials.json"
-        
-        if not os.path.exists(credentials_path):
+            credentials_path = "service_account_credentials.json"
+            
+            if not os.path.exists(credentials_path):
                 st.error(f"❌ Service account credentials not found. Please add them to Streamlit secrets or place {credentials_path} in the project directory.")
-            return None
-        
-        connector = GoogleSheetsConnector(credentials_path)
-        df = connector.get_sheet_data(SHEET_ID, WORKSHEET_NAME)
+                return None
+            
+            connector = GoogleSheetsConnector(credentials_path)
+            df = connector.get_sheet_data(SHEET_ID, WORKSHEET_NAME)
         
         if df is not None:
             df = clean_and_enhance_data(df)
