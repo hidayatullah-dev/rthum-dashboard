@@ -1288,7 +1288,7 @@ def main():
                 st.metric("Applications", f"{total_applications:,}")
             with col2:
                 st.metric("Replies", f"{replies_count:,}", f"{funnel_data['Conversion_Rate'][1]:.1f}%")
-        with col3:
+            with col3:
                 st.metric("Interviews", f"{interviews_count:,}", f"{funnel_data['Conversion_Rate'][2]:.1f}%")
             with col4:
                 st.metric("Job Wins", f"{job_wins_count:,}", f"{funnel_data['Conversion_Rate'][3]:.1f}%")
@@ -1297,9 +1297,9 @@ def main():
             st.markdown("#### 📈 Goal Tracking & Performance Analysis")
             
             # Create goal tracking charts
-        col1, col2 = st.columns(2)
-        
-        with col1:
+            col1, col2 = st.columns(2)
+            
+            with col1:
                 st.markdown("##### Monthly Applications vs Goals")
                 
                 # Simulate monthly data (you can replace with actual date-based aggregation)
