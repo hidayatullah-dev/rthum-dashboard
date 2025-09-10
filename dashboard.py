@@ -1488,7 +1488,7 @@ def main():
                         daily_data = pd.DataFrame({'Date': dates, 'Count': daily_counts})
                     else:
                         # Fallback to sample data if no jobs
-                    dates = pd.date_range(start='2025-07-07', end='2025-08-24', freq='D')
+                        dates = pd.date_range(start='2025-07-07', end='2025-08-24', freq='D')
                         daily_counts = [0] * len(dates)
                         daily_data = pd.DataFrame({'Date': dates, 'Count': daily_counts})
                 
@@ -1516,16 +1516,16 @@ def main():
             with col1:
                 st.markdown("#### Score Distribution by Category")
                 fig1 = create_safe_chart(df, 'violin', 'Category', 'Score', title='Score Distribution by Category')
-            if fig1:
-                st.plotly_chart(fig1, use_container_width=True)
+                if fig1:
+                    st.plotly_chart(fig1, use_container_width=True)
                 else:
                     st.info("📊 Chart will appear when data is available")
         
         with col2:
                 st.markdown("#### Amount Spent Distribution")
                 fig2 = create_safe_chart(df, 'histogram', 'Amount spent', 'Score', 'Category', title='Amount Spent Distribution by Category')
-            if fig2:
-                st.plotly_chart(fig2, use_container_width=True)
+                if fig2:
+                    st.plotly_chart(fig2, use_container_width=True)
                 else:
                     st.info("📊 Chart will appear when data is available")
         
@@ -1535,16 +1535,16 @@ def main():
             with col1:
                 st.markdown("#### Score vs Amount Correlation")
                 fig3 = create_safe_chart(df, 'scatter', 'Score', 'Amount spent', 'Category', 'Proposals', title='Score vs Amount (Size=Proposals)')
-            if fig3:
-                st.plotly_chart(fig3, use_container_width=True)
+                if fig3:
+                    st.plotly_chart(fig3, use_container_width=True)
                 else:
                     st.info("📊 Chart will appear when data is available")
         
             with col2:
                 st.markdown("#### Correlation Heatmap")
                 fig4 = create_safe_chart(df, 'heatmap', 'Score', 'Amount spent', 'Category', title='Correlation Matrix')
-            if fig4:
-                st.plotly_chart(fig4, use_container_width=True)
+                if fig4:
+                    st.plotly_chart(fig4, use_container_width=True)
                 else:
                     st.info("📊 Chart will appear when data is available")
     
