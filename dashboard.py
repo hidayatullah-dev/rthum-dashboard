@@ -1707,6 +1707,11 @@ def main():
                         prev_count = funnel_counts_list[i-1] if i > 0 else total_applications
                         conversion_rates.append((count / prev_count * 100) if prev_count > 0 else 0)
                 
+                # Initialize variables for metrics display
+                replies_count = funnel_counts_list[1] if len(funnel_counts_list) > 1 else 0
+                interviews_count = funnel_counts_list[2] if len(funnel_counts_list) > 2 else 0
+                job_wins_count = funnel_counts_list[3] if len(funnel_counts_list) > 3 else 0
+                
                 funnel_data = {
                     'Stage': funnel_stages,
                     'Count': funnel_counts_list,
