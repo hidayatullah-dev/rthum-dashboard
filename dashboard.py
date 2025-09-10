@@ -1262,8 +1262,7 @@ def main():
                 x='Count', 
                 y='Stage',
                 title='Overall Sales Funnel',
-                color='Count',
-                color_continuous_scale='Oranges'
+                color='Count'
             )
             
             # Add conversion rate annotations

@@ -163,7 +163,7 @@ class GoogleSheetsConnector:
             # WHY: Google Sheets data might have empty rows or inconsistent formatting
             # HOW: We remove completely empty rows and strip whitespace from string columns
             df = df.dropna(how='all')  # Remove rows where all values are NaN
-            df = df.applymap(lambda x: x.strip() if isinstance(x, str) else x)  # Strip whitespace
+            df = df.map(lambda x: x.strip() if isinstance(x, str) else x)  # Strip whitespace
             
             return df
             
