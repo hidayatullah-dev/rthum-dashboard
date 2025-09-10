@@ -1793,9 +1793,10 @@ def main():
                 st.markdown("##### Monthly Applications vs Goals")
                 
                 # Simulate monthly data (you can replace with actual date-based aggregation)
-                if 'Date' in df.columns:
-                    df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
-                    monthly_data = df.groupby(df['Date'].dt.to_period('M')).size().reset_index()
+                if 'Publish Date' in df.columns:
+                    df['Publish Date'] = pd.to_datetime(df['Publish Date'], errors='coerce')
+                    monthly_data = df.groupby(df['Publish Date'].dt.to_period('M')).size().reset_index()
+                    monthly_data.columns = ['Date', 'Applications']  # Rename the count column
                     monthly_data['Date'] = monthly_data['Date'].astype(str)
                 else:
                     # Create sample monthly data based on available data
@@ -1937,10 +1938,10 @@ def main():
                 st.markdown("##### Daily Job Scraping Trends")
                 
                 # Create daily trends data
-                if 'Date' in df.columns and not df['Date'].isna().all():
+                if 'Publish Date' in df.columns and not df['Publish Date'].isna().all():
                     # Use actual date data if available
-                    df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
-                    daily_data = df.groupby(df['Date'].dt.date).size().reset_index()
+                    df['Publish Date'] = pd.to_datetime(df['Publish Date'], errors='coerce')
+                    daily_data = df.groupby(df['Publish Date'].dt.date).size().reset_index()
                     daily_data.columns = ['Date', 'Count']
                 else:
                     # Distribute actual job data across recent days
