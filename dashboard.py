@@ -1368,6 +1368,10 @@ def main():
                 weekly_data = pd.DataFrame({'Week': weeks, 'Applications': weekly_counts})
                 weekly_data['Weekly_Goal'] = 50  # Weekly application goal
                 
+                # Ensure all values are valid numbers
+                weekly_data['Applications'] = pd.to_numeric(weekly_data['Applications'], errors='coerce').fillna(0)
+                weekly_data['Weekly_Goal'] = pd.to_numeric(weekly_data['Weekly_Goal'], errors='coerce').fillna(50)
+                
                 # Create weekly chart
                 fig_weekly = go.Figure()
                 
@@ -1376,7 +1380,7 @@ def main():
                     name='Job Applications',
                     x=weekly_data['Week'],
                     y=weekly_data['Applications'],
-                    marker_color='lightorange',
+                    marker_color='orange',
                     marker_line=dict(color='blue', width=1)
                 ))
                 
@@ -1406,6 +1410,10 @@ def main():
                 daily_avg_data = weekly_data.copy()
                 daily_avg_data['Daily_Avg'] = daily_avg_data['Applications'] / 7  # Convert weekly to daily average
                 daily_avg_data['Daily_Goal'] = 11  # Daily application goal
+                
+                # Ensure daily average values are valid numbers
+                daily_avg_data['Daily_Avg'] = pd.to_numeric(daily_avg_data['Daily_Avg'], errors='coerce').fillna(0)
+                daily_avg_data['Daily_Goal'] = pd.to_numeric(daily_avg_data['Daily_Goal'], errors='coerce').fillna(11)
             
                 fig_daily = go.Figure()
                 
