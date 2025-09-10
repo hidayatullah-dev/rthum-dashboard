@@ -1296,21 +1296,31 @@ def main():
                 }
             else:
                 # Fallback to original logic if funnel_stage column not available
+                # Use actual data from your Proposals Tracking sheet
                 total_applications = len(df)
-                replies_count = len(df[df['Proposals'] > 0]) if 'Proposals' in df.columns else 0
-                interviews_count = len(df[df['Score'] > 50]) if 'Score' in df.columns else 0
-                job_wins_count = len(df[df['Score'] > 80]) if 'Score' in df.columns else 0
-            
-            funnel_data = {
-                'Stage': ['Applications', 'Replies', 'Interviews', 'Job Wins'],
-                'Count': [total_applications, replies_count, interviews_count, job_wins_count],
-                'Conversion_Rate': [
-                    100.0,  # Applications baseline
-                    (replies_count / total_applications * 100) if total_applications > 0 else 0,
-                    (interviews_count / replies_count * 100) if replies_count > 0 else 0,
-                    (job_wins_count / interviews_count * 100) if interviews_count > 0 else 0
-                ]
-            }
+                
+                # Count based on your actual data structure
+                replies_count = len(df[df['Reply Date'].notna()]) if 'Reply Date' in df.columns else 0
+                interviews_count = len(df[df['Date Interview'].notna()]) if 'Date Interview' in df.columns else 0
+                job_wins_count = len(df[df['Job Won'] == 'Yes']) if 'Job Won' in df.columns else 0
+                
+                # If we have proposal data, count proposals sent
+                if 'Proposal Number of words' in df.columns:
+                    proposals_sent = len(df[df['Proposal Number of words'].notna()])
+                else:
+                    proposals_sent = total_applications
+                
+                funnel_data = {
+                    'Stage': ['Applications', 'Proposals Sent', 'Replies', 'Interviews', 'Job Wins'],
+                    'Count': [total_applications, proposals_sent, replies_count, interviews_count, job_wins_count],
+                    'Conversion_Rate': [
+                        100.0,  # Applications baseline
+                        (proposals_sent / total_applications * 100) if total_applications > 0 else 0,
+                        (replies_count / proposals_sent * 100) if proposals_sent > 0 else 0,
+                        (interviews_count / replies_count * 100) if replies_count > 0 else 0,
+                        (job_wins_count / interviews_count * 100) if interviews_count > 0 else 0
+                    ]
+                }
             
             funnel_df = pd.DataFrame(funnel_data)
             

@@ -306,12 +306,20 @@ class GoogleSheetsConnector:
             merged_df = self.get_multiple_sheets_data(sheet_id, funnel_configs)
             
             if merged_df is not None:
-                # Add funnel stage based on data source
+                # Add funnel stage based on data source and actual data content
                 def assign_funnel_stage(row):
                     if row['data_source'] == 'job_data':
                         return 'Job Application'
                     elif row['data_source'] == 'proposal_data':
-                        return 'Proposal Sent'
+                        # For proposal data, check if there are replies/interviews/job wins
+                        if 'Job Won' in row and pd.notna(row.get('Job Won')) and str(row.get('Job Won')).lower() == 'yes':
+                            return 'Job Won'
+                        elif 'Date Interview' in row and pd.notna(row.get('Date Interview')):
+                            return 'Interview Scheduled'
+                        elif 'Reply Date' in row and pd.notna(row.get('Reply Date')):
+                            return 'Reply Received'
+                        else:
+                            return 'Proposal Sent'
                     elif row['data_source'] == 'analytics_data':
                         return 'Performance Analytics'
                     elif row['data_source'] == 'ranking_data':
