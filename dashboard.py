@@ -521,7 +521,7 @@ def run_experiment(df, name, control_filter, treatment_filter, metric):
         st.session_state.experiments[name] = results
         
         # Display comprehensive results
-        st.success(f"✅ Advanced Experiment '{name}' completed!")
+        st.toast(f"✅ Experiment '{name}' completed!", icon="✅")
         
         # Statistical significance indicator
         significance_color = "🟢" if p_value < 0.05 else "🔴"
@@ -613,7 +613,7 @@ def create_formula_builder(df):
                         test_formula_safe = test_formula_safe.replace(original, safe)
                     
                     test_result = df_temp.eval(test_formula_safe, engine='python')
-                    st.success("✅ Formula is valid!")
+                    st.toast("✅ Formula is valid!", icon="✅")
                     st.write("**Sample results:**")
                     st.write(test_result.head(10))
                     st.write(f"**Data type:** {test_result.dtype}")
@@ -760,7 +760,7 @@ Country != 'Unknown'
         # Apply formula
         df[f'Custom_{name}'] = test_result
         
-        st.success(f"✅ Formula '{name}' created and applied!")
+        st.toast(f"✅ Formula '{name}' created!", icon="✅")
         st.info(f"New column 'Custom_{name}' added to dataset")
         
         # Show preview of the new column
@@ -859,7 +859,7 @@ def apply_formula(df, name, expression):
         
         # Apply formula
         df[f'Custom_{name}'] = df_temp.eval(expression_safe, engine='python')
-        st.success(f"✅ Formula '{name}' applied!")
+        st.toast(f"✅ Formula '{name}' applied!", icon="✅")
         
         # Show preview
         if len(df) > 0:
@@ -1022,7 +1022,7 @@ def test_single_formula(df, formula, name):
         # Evaluate formula
         result = df_temp.eval(formula_safe, engine='python')
         
-        st.success(f"✅ {name} formula is valid!")
+        st.toast(f"✅ {name} formula is valid!", icon="✅")
         
         # Show results in a simpler format
         st.write(f"**Sample Values:** {len(result)} rows")
@@ -1070,7 +1070,7 @@ def create_formula_from_library(df, name, formula):
             'timestamp': datetime.now().isoformat()
         }
         
-        st.success(f"✅ Formula '{name}' created and applied!")
+        st.toast(f"✅ Formula '{name}' created!", icon="✅")
         st.info(f"New column 'Custom_{name}' added to dataset")
         
         # Show preview
@@ -1142,7 +1142,7 @@ def create_formula_chart(df, formula_column, chart_type, x_column, formula_name)
         )
         
         st.plotly_chart(fig, use_container_width=True)
-        st.success(f"✅ Chart created for formula: {formula_name}")
+        st.toast(f"✅ Chart created for {formula_name}!", icon="✅")
         
     except Exception as e:
         st.error(f"Error creating chart: {str(e)}")

@@ -250,9 +250,10 @@ class GoogleSheetsConnector:
                     df['data_source'] = data_type
                     df['worksheet_name'] = worksheet_name
                     all_data.append(df)
-                    st.success(f"✅ Successfully loaded {len(df)} rows from '{worksheet_name}' ({data_type})")
+                    # Use toast for temporary notification that auto-dismisses
+                    st.toast(f"✅ Loaded {len(df)} rows from '{worksheet_name}'", icon="✅")
                 else:
-                    st.warning(f"⚠️ No data found in worksheet '{worksheet_name}' ({data_type})")
+                    st.toast(f"⚠️ No data in '{worksheet_name}'", icon="⚠️")
             
             if not all_data:
                 st.error("❌ No data found in any of the specified worksheets")
@@ -264,7 +265,8 @@ class GoogleSheetsConnector:
             # Add a unique ID for each row
             merged_df['row_id'] = range(len(merged_df))
             
-            st.success(f"🎉 Successfully merged data from {len(all_data)} worksheets. Total rows: {len(merged_df)}")
+            # Use toast for temporary notification that auto-dismisses
+            st.toast(f"🎉 Merged {len(all_data)} worksheets: {len(merged_df)} total rows", icon="🎉")
             
             return merged_df
             
@@ -329,7 +331,8 @@ class GoogleSheetsConnector:
                 elif 'Date' not in merged_df.columns:
                     merged_df['Date'] = pd.Timestamp.now()
                 
-                st.info(f"📊 Sales funnel data loaded: {len(merged_df)} total records across {merged_df['funnel_stage'].nunique()} stages")
+                # Use toast for temporary notification that auto-dismisses
+                st.toast(f"📊 Sales funnel: {len(merged_df)} records, {merged_df['funnel_stage'].nunique()} stages", icon="📊")
                 
             return merged_df
             
