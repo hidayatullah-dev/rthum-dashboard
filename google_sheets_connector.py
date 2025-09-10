@@ -290,6 +290,7 @@ class GoogleSheetsConnector:
         """
         try:
             # Define the sales funnel worksheets and their types
+            # Updated to ensure latest version is deployed
             funnel_configs = [
                 {'name': 'Scraping Data version 2', 'type': 'job_data'},
                 {'name': 'Proposals Tracking', 'type': 'proposal_data'},
