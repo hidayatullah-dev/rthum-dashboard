@@ -1147,6 +1147,424 @@ def create_formula_chart(df, formula_column, chart_type, x_column, formula_name)
     except Exception as e:
         st.error(f"Error creating chart: {str(e)}")
 
+def create_business_plan_analysis():
+    """Create comprehensive business plan analysis with conversion funnels, goals, and revenue tracking."""
+    st.subheader("📈 Business Plan Analysis")
+    
+    # Business Plan Data (from your Excel sheet)
+    business_data = {
+        'metric': ['Applications sent', 'Replies', 'Interviews', 'Job Won'],
+        'baseline_2025': [120, 28, 19, 5],
+        'outbound_goal_90': [192, 45, 30, 8],
+        'inbound_goal_90': [1700, 51, 5, 1],
+        'conversion_rate': [23, 68, 26, 20]  # % conversion rates
+    }
+    
+    # Financial metrics
+    financial_data = {
+        'metric': ['Average deal size', 'LTV (Outbound)', 'LTV (Inbound)', 'Monthly gross revenue (Outbound)', 'Monthly gross revenue (Inbound)', 'Net revenue (Combined)'],
+        'value': [4500, 432000, 54000, 36000, 4500, 36450],
+        'type': ['Revenue', 'LTV', 'LTV', 'Revenue', 'Revenue', 'Revenue']
+    }
+    
+    # Daily activity targets
+    daily_targets = {
+        'activity': ['Applications', 'Replies', 'Interviews', 'Job Won', 'Impressions', 'Profile views', 'Invites', 'Hires'],
+        'daily_target': [11, 3, 2, 0, 57, 2, 0.2, 0.03],
+        'category': ['Outbound', 'Outbound', 'Outbound', 'Outbound', 'Inbound', 'Inbound', 'Inbound', 'Inbound']
+    }
+    
+    # Create tabs for different analysis views
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["🎯 Conversion Funnel", "📊 Goal Tracking", "💰 Revenue Analysis", "📅 Daily Targets", "📈 Performance KPIs"])
+    
+    with tab1:
+        st.markdown("#### 🎯 Sales Funnel Analysis")
+        
+        # Create conversion funnel data
+        funnel_df = pd.DataFrame(business_data)
+        
+        # Calculate conversion rates between stages
+        funnel_df['conversion_to_next'] = [
+            100,  # Applications baseline
+            (funnel_df.loc[1, 'baseline_2025'] / funnel_df.loc[0, 'baseline_2025'] * 100),  # Applications to Replies
+            (funnel_df.loc[2, 'baseline_2025'] / funnel_df.loc[1, 'baseline_2025'] * 100),  # Replies to Interviews
+            (funnel_df.loc[3, 'baseline_2025'] / funnel_df.loc[2, 'baseline_2025'] * 100)   # Interviews to Job Won
+        ]
+        
+        # Create funnel chart
+        fig_funnel = go.Figure(go.Funnel(
+            y=funnel_df['metric'],
+            x=funnel_df['baseline_2025'],
+            textinfo="value+percent initial",
+            textposition="inside",
+            marker=dict(
+                color=["#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4"],
+                line=dict(width=2, color="white")
+            ),
+            connector=dict(line=dict(color="royalblue", dash="dot", width=3))
+        ))
+        
+        fig_funnel.update_layout(
+            title="Current Sales Funnel (2025 Baseline)",
+            font=dict(size=14),
+            height=500,
+            showlegend=False
+        )
+        
+        st.plotly_chart(fig_funnel, use_container_width=True)
+        
+        # Display conversion rates
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Applications → Replies", f"{funnel_df.loc[1, 'conversion_to_next']:.1f}%")
+        with col2:
+            st.metric("Replies → Interviews", f"{funnel_df.loc[2, 'conversion_to_next']:.1f}%")
+        with col3:
+            st.metric("Interviews → Job Won", f"{funnel_df.loc[3, 'conversion_to_next']:.1f}%")
+        with col4:
+            st.metric("Overall Conversion", f"{funnel_df.loc[3, 'baseline_2025'] / funnel_df.loc[0, 'baseline_2025'] * 100:.1f}%")
+    
+    with tab2:
+        st.markdown("#### 📊 Goal Tracking & Performance")
+        
+        # Create goal comparison chart
+        goal_df = pd.DataFrame(business_data)
+        
+        # Melt data for easier plotting
+        goal_melted = goal_df.melt(
+            id_vars=['metric'], 
+            value_vars=['baseline_2025', 'outbound_goal_90', 'inbound_goal_90'],
+            var_name='period', 
+            value_name='count'
+        )
+        
+        # Rename periods for better display
+        goal_melted['period'] = goal_melted['period'].replace({
+            'baseline_2025': 'Current (2025)',
+            'outbound_goal_90': 'Outbound Goal (90%)',
+            'inbound_goal_90': 'Inbound Goal (90%)'
+        })
+        
+        fig_goals = px.bar(
+            goal_melted, 
+            x='metric', 
+            y='count', 
+            color='period',
+            title='Current Performance vs Goals',
+            barmode='group',
+            color_discrete_sequence=['#FF6B6B', '#4ECDC4', '#45B7D1']
+        )
+        
+        fig_goals.update_layout(
+            xaxis_title='Sales Stage',
+            yaxis_title='Count',
+            height=500,
+            legend_title='Period'
+        )
+        
+        st.plotly_chart(fig_goals, use_container_width=True)
+        
+        # Goal achievement analysis
+        st.markdown("##### Goal Achievement Analysis")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # Outbound goal achievement
+            outbound_achievement = []
+            for i, metric in enumerate(goal_df['metric']):
+                current = goal_df.loc[i, 'baseline_2025']
+                goal = goal_df.loc[i, 'outbound_goal_90']
+                achievement = (current / goal * 100) if goal > 0 else 0
+                outbound_achievement.append(achievement)
+            
+            outbound_df = pd.DataFrame({
+                'metric': goal_df['metric'],
+                'achievement_%': outbound_achievement
+            })
+            
+            fig_outbound = px.bar(
+                outbound_df, 
+                x='metric', 
+                y='achievement_%',
+                title='Outbound Goal Achievement %',
+                color='achievement_%',
+                color_continuous_scale='RdYlGn'
+            )
+            
+            fig_outbound.update_layout(height=400)
+            st.plotly_chart(fig_outbound, use_container_width=True)
+        
+        with col2:
+            # Inbound goal achievement (different scale)
+            inbound_achievement = []
+            for i, metric in enumerate(goal_df['metric']):
+                if i < len(goal_df) and goal_df.loc[i, 'inbound_goal_90'] > 0:
+                    current = goal_df.loc[i, 'baseline_2025']
+                    goal = goal_df.loc[i, 'inbound_goal_90']
+                    achievement = (current / goal * 100) if goal > 0 else 0
+                    inbound_achievement.append(achievement)
+                else:
+                    inbound_achievement.append(0)
+            
+            inbound_df = pd.DataFrame({
+                'metric': goal_df['metric'],
+                'achievement_%': inbound_achievement
+            })
+            
+            fig_inbound = px.bar(
+                inbound_df, 
+                x='metric', 
+                y='achievement_%',
+                title='Inbound Goal Achievement %',
+                color='achievement_%',
+                color_continuous_scale='RdYlGn'
+            )
+            
+            fig_inbound.update_layout(height=400)
+            st.plotly_chart(fig_inbound, use_container_width=True)
+    
+    with tab3:
+        st.markdown("#### 💰 Revenue Analysis")
+        
+        # Financial metrics visualization
+        financial_df = pd.DataFrame(financial_data)
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # Revenue breakdown
+            revenue_data = financial_df[financial_df['type'] == 'Revenue']
+            
+            fig_revenue = px.pie(
+                revenue_data,
+                values='value',
+                names='metric',
+                title='Revenue Distribution',
+                color_discrete_sequence=px.colors.qualitative.Set3
+            )
+            
+            fig_revenue.update_traces(textposition='inside', textinfo='percent+label')
+            st.plotly_chart(fig_revenue, use_container_width=True)
+        
+        with col2:
+            # LTV comparison
+            ltv_data = financial_df[financial_df['type'] == 'LTV']
+            
+            fig_ltv = px.bar(
+                ltv_data,
+                x='metric',
+                y='value',
+                title='Lifetime Value (LTV) Comparison',
+                color='value',
+                color_continuous_scale='Viridis'
+            )
+            
+            fig_ltv.update_layout(
+                xaxis_title='LTV Type',
+                yaxis_title='Value ($)',
+                height=400
+            )
+            
+            st.plotly_chart(fig_ltv, use_container_width=True)
+        
+        # Financial summary cards
+        st.markdown("##### 💵 Financial Summary")
+        
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            st.metric("Average Deal Size", "$4,500")
+        with col2:
+            st.metric("Outbound LTV", "$432,000")
+        with col3:
+            st.metric("Inbound LTV", "$54,000")
+        with col4:
+            st.metric("Net Revenue", "$36,450")
+    
+    with tab4:
+        st.markdown("#### 📅 Daily Activity Targets")
+        
+        # Daily targets visualization
+        daily_df = pd.DataFrame(daily_targets)
+        
+        # Separate outbound and inbound activities
+        outbound_daily = daily_df[daily_df['category'] == 'Outbound']
+        inbound_daily = daily_df[daily_df['category'] == 'Inbound']
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("##### Outbound Daily Targets")
+            
+            fig_outbound_daily = px.bar(
+                outbound_daily,
+                x='activity',
+                y='daily_target',
+                title='Outbound Daily Activity Targets',
+                color='daily_target',
+                color_continuous_scale='Blues'
+            )
+            
+            fig_outbound_daily.update_layout(
+                xaxis_title='Activity',
+                yaxis_title='Daily Target',
+                height=400
+            )
+            
+            st.plotly_chart(fig_outbound_daily, use_container_width=True)
+        
+        with col2:
+            st.markdown("##### Inbound Daily Targets")
+            
+            fig_inbound_daily = px.bar(
+                inbound_daily,
+                x='activity',
+                y='daily_target',
+                title='Inbound Daily Activity Targets',
+                color='daily_target',
+                color_continuous_scale='Greens'
+            )
+            
+            fig_inbound_daily.update_layout(
+                xaxis_title='Activity',
+                yaxis_title='Daily Target',
+                height=400
+            )
+            
+            st.plotly_chart(fig_inbound_daily, use_container_width=True)
+        
+        # Weekly targets calculation
+        st.markdown("##### 📊 Weekly Targets (Daily × 7)")
+        
+        weekly_targets = daily_df.copy()
+        weekly_targets['weekly_target'] = weekly_targets['daily_target'] * 7
+        
+        fig_weekly = px.bar(
+            weekly_targets,
+            x='activity',
+            y='weekly_target',
+            color='category',
+            title='Weekly Activity Targets',
+            barmode='group'
+        )
+        
+        fig_weekly.update_layout(
+            xaxis_title='Activity',
+            yaxis_title='Weekly Target',
+            height=400
+        )
+        
+        st.plotly_chart(fig_weekly, use_container_width=True)
+    
+    with tab5:
+        st.markdown("#### 📈 Key Performance Indicators")
+        
+        # KPI cards
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            st.markdown(f'''
+            <div class="metric-card">
+                <h3>🎯 Conversion Rate</h3>
+                <h1 style="font-size: 3rem; margin: 0;">4.2%</h1>
+                <p style="margin: 0.5rem 0 0 0; opacity: 0.8;">Overall (5/120)</p>
+            </div>
+            ''', unsafe_allow_html=True)
+        
+        with col2:
+            st.markdown(f'''
+            <div class="metric-card">
+                <h3>💰 Avg Deal Size</h3>
+                <h1 style="font-size: 3rem; margin: 0;">$4,500</h1>
+                <p style="margin: 0.5rem 0 0 0; opacity: 0.8;">Per Job Won</p>
+            </div>
+            ''', unsafe_allow_html=True)
+        
+        with col3:
+            st.markdown(f'''
+            <div class="metric-card">
+                <h3>📊 Reply Rate</h3>
+                <h1 style="font-size: 3rem; margin: 0;">23%</h1>
+                <p style="margin: 0.5rem 0 0 0; opacity: 0.8;">Applications to Replies</p>
+            </div>
+            ''', unsafe_allow_html=True)
+        
+        with col4:
+            st.markdown(f'''
+            <div class="metric-card">
+                <h3>🎯 Interview Rate</h3>
+                <h1 style="font-size: 3rem; margin: 0;">68%</h1>
+                <p style="margin: 0.5rem 0 0 0; opacity: 0.8;">Replies to Interviews</p>
+            </div>
+            ''', unsafe_allow_html=True)
+        
+        # Performance trends
+        st.markdown("##### 📈 Performance Trends")
+        
+        # Create performance trend data
+        months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+        
+        # Simulate monthly performance data
+        np.random.seed(42)
+        applications_trend = [120 + np.random.randint(-20, 30) for _ in months]
+        replies_trend = [int(app * 0.23 + np.random.randint(-5, 10)) for app in applications_trend]
+        interviews_trend = [int(rep * 0.68 + np.random.randint(-2, 5)) for rep in replies_trend]
+        job_wins_trend = [int(intv * 0.26 + np.random.randint(-1, 2)) for intv in interviews_trend]
+        
+        trend_data = pd.DataFrame({
+            'Month': months,
+            'Applications': applications_trend,
+            'Replies': replies_trend,
+            'Interviews': interviews_trend,
+            'Job Won': job_wins_trend
+        })
+        
+        fig_trends = go.Figure()
+        
+        # Add traces for each metric
+        fig_trends.add_trace(go.Scatter(
+            x=trend_data['Month'],
+            y=trend_data['Applications'],
+            mode='lines+markers',
+            name='Applications',
+            line=dict(color='#FF6B6B', width=3)
+        ))
+        
+        fig_trends.add_trace(go.Scatter(
+            x=trend_data['Month'],
+            y=trend_data['Replies'],
+            mode='lines+markers',
+            name='Replies',
+            line=dict(color='#4ECDC4', width=3)
+        ))
+        
+        fig_trends.add_trace(go.Scatter(
+            x=trend_data['Month'],
+            y=trend_data['Interviews'],
+            mode='lines+markers',
+            name='Interviews',
+            line=dict(color='#45B7D1', width=3)
+        ))
+        
+        fig_trends.add_trace(go.Scatter(
+            x=trend_data['Month'],
+            y=trend_data['Job Won'],
+            mode='lines+markers',
+            name='Job Won',
+            line=dict(color='#96CEB4', width=3)
+        ))
+        
+        fig_trends.update_layout(
+            title='Monthly Performance Trends',
+            xaxis_title='Month',
+            yaxis_title='Count',
+            height=500,
+            hovermode='x unified'
+        )
+        
+        st.plotly_chart(fig_trends, use_container_width=True)
+
 def create_chart_builder(df):
     """Create advanced chart builder interface."""
     st.subheader("📊 Advanced Chart Builder")
@@ -1210,7 +1628,7 @@ def main():
         st.markdown("### 🧭 Navigation")
         page = st.selectbox(
             "Select Page:",
-            ["📊 Overview", "🧪 Experiments", "🧮 Formulas", "📊 Chart Builder"]
+            ["📊 Overview", "📈 Business Plan", "🧪 Experiments", "🧮 Formulas", "📊 Chart Builder"]
         )
     
     # Load data
@@ -1615,6 +2033,9 @@ def main():
                     st.plotly_chart(fig4, use_container_width=True)
                 else:
                     st.info("📊 Chart will appear when data is available")
+    
+    elif page == "📈 Business Plan":
+        create_business_plan_analysis()
     
     elif page == "🧪 Experiments":
         create_experiment_interface(df)
