@@ -1491,8 +1491,10 @@ def main():
                 else:
                     # Create sample daily data
                     dates = pd.date_range(start='2025-07-07', end='2025-08-24', freq='D')
-                    daily_counts = [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 2, 1, 1, 3, 3, 7]
-                    daily_data = pd.DataFrame({'Date': dates[:len(daily_counts)], 'Count': daily_counts})
+                    daily_counts = [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 2]
+                    # Ensure both arrays have the same length
+                    daily_counts = daily_counts[:len(dates)]
+                    daily_data = pd.DataFrame({'Date': dates, 'Count': daily_counts})
                 
                 fig_daily = px.bar(
                     daily_data, 
