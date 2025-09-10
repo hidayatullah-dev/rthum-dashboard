@@ -293,9 +293,10 @@ class GoogleSheetsConnector:
             funnel_configs = [
                 {'name': 'Scraping Data version 2', 'type': 'job_data'},
                 {'name': 'Proposals Tracking', 'type': 'proposal_data'},
+                {'name': 'Upwork Analytics', 'type': 'analytics_data'},
+                {'name': 'Upwork Ranking', 'type': 'ranking_data'},
                 # Add more worksheets as needed
-                # {'name': 'Contracts', 'type': 'contract_data'},
-                # {'name': 'Payments', 'type': 'payment_data'},
+                # {'name': 'Data', 'type': 'general_data'},
             ]
             
             # Get data from all worksheets
@@ -308,12 +309,16 @@ class GoogleSheetsConnector:
                         return 'Job Application'
                     elif row['data_source'] == 'proposal_data':
                         return 'Proposal Sent'
+                    elif row['data_source'] == 'analytics_data':
+                        return 'Performance Analytics'
+                    elif row['data_source'] == 'ranking_data':
+                        return 'Ranking & Positioning'
                     elif row['data_source'] == 'contract_data':
                         return 'Contract Signed'
                     elif row['data_source'] == 'payment_data':
                         return 'Payment Received'
                     else:
-                        return 'Unknown Stage'
+                        return 'Other Data'
                 
                 merged_df['funnel_stage'] = merged_df.apply(assign_funnel_stage, axis=1)
                 

@@ -1243,11 +1243,15 @@ def main():
                 st.info(f"📊 **Data Sources:** {', '.join(df['data_source'].unique())} | **Total Records:** {len(df)}")
                 
                 # Show data breakdown by source
-                col1, col2 = st.columns(2)
+                col1, col2, col3, col4 = st.columns(4)
                 with col1:
                     st.metric("Job Applications", len(df[df['data_source'] == 'job_data']) if 'job_data' in df['data_source'].values else 0)
                 with col2:
                     st.metric("Proposals Sent", len(df[df['data_source'] == 'proposal_data']) if 'proposal_data' in df['data_source'].values else 0)
+                with col3:
+                    st.metric("Analytics Data", len(df[df['data_source'] == 'analytics_data']) if 'analytics_data' in df['data_source'].values else 0)
+                with col4:
+                    st.metric("Ranking Data", len(df[df['data_source'] == 'ranking_data']) if 'ranking_data' in df['data_source'].values else 0)
             
             # Calculate funnel metrics from the multi-sheet data
             if 'funnel_stage' in df.columns:
@@ -1258,8 +1262,11 @@ def main():
                 stage_mapping = {
                     'Job Application': 'Applications',
                     'Proposal Sent': 'Proposals',
+                    'Performance Analytics': 'Analytics',
+                    'Ranking & Positioning': 'Ranking',
                     'Contract Signed': 'Contracts',
-                    'Payment Received': 'Payments'
+                    'Payment Received': 'Payments',
+                    'Other Data': 'Other'
                 }
                 
                 # Create funnel data with actual stages
@@ -1293,17 +1300,17 @@ def main():
                 replies_count = len(df[df['Proposals'] > 0]) if 'Proposals' in df.columns else 0
                 interviews_count = len(df[df['Score'] > 50]) if 'Score' in df.columns else 0
                 job_wins_count = len(df[df['Score'] > 80]) if 'Score' in df.columns else 0
-                
-                funnel_data = {
-                    'Stage': ['Applications', 'Replies', 'Interviews', 'Job Wins'],
-                    'Count': [total_applications, replies_count, interviews_count, job_wins_count],
-                    'Conversion_Rate': [
-                        100.0,  # Applications baseline
-                        (replies_count / total_applications * 100) if total_applications > 0 else 0,
-                        (interviews_count / replies_count * 100) if replies_count > 0 else 0,
-                        (job_wins_count / interviews_count * 100) if interviews_count > 0 else 0
-                    ]
-                }
+            
+            funnel_data = {
+                'Stage': ['Applications', 'Replies', 'Interviews', 'Job Wins'],
+                'Count': [total_applications, replies_count, interviews_count, job_wins_count],
+                'Conversion_Rate': [
+                    100.0,  # Applications baseline
+                    (replies_count / total_applications * 100) if total_applications > 0 else 0,
+                    (interviews_count / replies_count * 100) if replies_count > 0 else 0,
+                    (job_wins_count / interviews_count * 100) if interviews_count > 0 else 0
+                ]
+            }
             
             funnel_df = pd.DataFrame(funnel_data)
             

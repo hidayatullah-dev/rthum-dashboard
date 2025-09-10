@@ -19,17 +19,22 @@ SALES_FUNNEL_SHEETS = [
         'name': 'Proposals Tracking',
         'type': 'proposal_data', 
         'description': 'Proposals sent and tracking data'
+    },
+    {
+        'name': 'Upwork Analytics',
+        'type': 'analytics_data',
+        'description': 'Upwork performance analytics data'
+    },
+    {
+        'name': 'Upwork Ranking',
+        'type': 'ranking_data',
+        'description': 'Upwork ranking and positioning data'
     }
     # Add more sheets as needed for complete funnel analysis
     # {
-    #     'name': 'Contracts',
-    #     'type': 'contract_data',
-    #     'description': 'Contract and agreement data'
-    # },
-    # {
-    #     'name': 'Payments',
-    #     'type': 'payment_data',
-    #     'description': 'Payment and revenue data'
+    #     'name': 'Data',
+    #     'type': 'general_data',
+    #     'description': 'General data and metrics'
     # }
 ]
 
