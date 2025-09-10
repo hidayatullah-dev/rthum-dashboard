@@ -109,7 +109,8 @@ def load_data():
             
             # Create connector with credentials
             connector = GoogleSheetsConnector.from_credentials(credentials)
-            df = connector.get_sheet_data(SHEET_ID, WORKSHEET_NAME)
+            # Use sales funnel data method to get data from multiple sheets
+            df = connector.get_sales_funnel_data(SHEET_ID)
         else:
             # Fallback to local file (for local development)
             credentials_path = "service_account_credentials.json"
@@ -119,7 +120,8 @@ def load_data():
                 return None
             
             connector = GoogleSheetsConnector(credentials_path)
-            df = connector.get_sheet_data(SHEET_ID, WORKSHEET_NAME)
+            # Use sales funnel data method to get data from multiple sheets
+            df = connector.get_sales_funnel_data(SHEET_ID)
         
         if df is not None:
             df = clean_and_enhance_data(df)
@@ -1236,23 +1238,72 @@ def main():
         with viz_tab1:
             st.markdown("#### 🎯 Upwork Sales Funnel Analysis")
             
-            # Calculate funnel metrics from the data
-            total_applications = len(df)
-            replies_count = len(df[df['Proposals'] > 0]) if 'Proposals' in df.columns else 0
-            interviews_count = len(df[df['Score'] > 50]) if 'Score' in df.columns else 0  # Assuming high score = interview stage
-            job_wins_count = len(df[df['Score'] > 80]) if 'Score' in df.columns else 0  # Assuming very high score = job won
+            # Display data sources information
+            if 'data_source' in df.columns:
+                st.info(f"📊 **Data Sources:** {', '.join(df['data_source'].unique())} | **Total Records:** {len(df)}")
+                
+                # Show data breakdown by source
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.metric("Job Applications", len(df[df['data_source'] == 'job_data']) if 'job_data' in df['data_source'].values else 0)
+                with col2:
+                    st.metric("Proposals Sent", len(df[df['data_source'] == 'proposal_data']) if 'proposal_data' in df['data_source'].values else 0)
             
-            # Create funnel data
-            funnel_data = {
-                'Stage': ['Applications', 'Replies', 'Interviews', 'Job Wins'],
-                'Count': [total_applications, replies_count, interviews_count, job_wins_count],
-                'Conversion_Rate': [
-                    100.0,  # Applications baseline
-                    (replies_count / total_applications * 100) if total_applications > 0 else 0,
-                    (interviews_count / replies_count * 100) if replies_count > 0 else 0,
-                    (job_wins_count / interviews_count * 100) if interviews_count > 0 else 0
-                ]
-            }
+            # Calculate funnel metrics from the multi-sheet data
+            if 'funnel_stage' in df.columns:
+                # Use actual funnel stages from the data
+                funnel_counts = df['funnel_stage'].value_counts()
+                
+                # Map to standard funnel stages
+                stage_mapping = {
+                    'Job Application': 'Applications',
+                    'Proposal Sent': 'Proposals',
+                    'Contract Signed': 'Contracts',
+                    'Payment Received': 'Payments'
+                }
+                
+                # Create funnel data with actual stages
+                funnel_stages = []
+                funnel_counts_list = []
+                
+                for stage, count in funnel_counts.items():
+                    mapped_stage = stage_mapping.get(stage, stage)
+                    funnel_stages.append(mapped_stage)
+                    funnel_counts_list.append(count)
+                
+                # Calculate conversion rates
+                total_applications = funnel_counts_list[0] if funnel_counts_list else 0
+                conversion_rates = []
+                
+                for i, count in enumerate(funnel_counts_list):
+                    if i == 0:
+                        conversion_rates.append(100.0)  # First stage is baseline
+                    else:
+                        prev_count = funnel_counts_list[i-1] if i > 0 else total_applications
+                        conversion_rates.append((count / prev_count * 100) if prev_count > 0 else 0)
+                
+                funnel_data = {
+                    'Stage': funnel_stages,
+                    'Count': funnel_counts_list,
+                    'Conversion_Rate': conversion_rates
+                }
+            else:
+                # Fallback to original logic if funnel_stage column not available
+                total_applications = len(df)
+                replies_count = len(df[df['Proposals'] > 0]) if 'Proposals' in df.columns else 0
+                interviews_count = len(df[df['Score'] > 50]) if 'Score' in df.columns else 0
+                job_wins_count = len(df[df['Score'] > 80]) if 'Score' in df.columns else 0
+                
+                funnel_data = {
+                    'Stage': ['Applications', 'Replies', 'Interviews', 'Job Wins'],
+                    'Count': [total_applications, replies_count, interviews_count, job_wins_count],
+                    'Conversion_Rate': [
+                        100.0,  # Applications baseline
+                        (replies_count / total_applications * 100) if total_applications > 0 else 0,
+                        (interviews_count / replies_count * 100) if replies_count > 0 else 0,
+                        (job_wins_count / interviews_count * 100) if interviews_count > 0 else 0
+                    ]
+                }
             
             funnel_df = pd.DataFrame(funnel_data)
             

@@ -216,3 +216,117 @@ class GoogleSheetsConnector:
         except Exception as e:
             st.error(f"Error getting sheet info: {str(e)}")
             return None
+    
+    def get_multiple_sheets_data(self, sheet_id: str, worksheet_configs: list) -> Optional[pd.DataFrame]:
+        """
+        Fetch data from multiple Google Sheets worksheets and merge them.
+        
+        WHY: Sales funnel data often spans multiple sheets (e.g., job applications, 
+        proposals, contracts). We need to combine this data for comprehensive analysis.
+        
+        HOW: We fetch data from each specified worksheet, add a source identifier,
+        and merge all data into a single DataFrame for unified analysis.
+        
+        Args:
+            sheet_id (str): The Google Sheet ID
+            worksheet_configs (list): List of dictionaries with worksheet configurations
+                Each dict should have: {'name': 'SheetName', 'type': 'job_data'|'proposal_data'|'contract_data'}
+        
+        Returns:
+            Optional[pd.DataFrame]: Merged data from all worksheets, or None if error
+        """
+        try:
+            all_data = []
+            
+            for config in worksheet_configs:
+                worksheet_name = config['name']
+                data_type = config.get('type', 'unknown')
+                
+                # Fetch data from this worksheet
+                df = self.get_sheet_data(sheet_id, worksheet_name)
+                
+                if df is not None and not df.empty:
+                    # Add source information
+                    df['data_source'] = data_type
+                    df['worksheet_name'] = worksheet_name
+                    all_data.append(df)
+                    st.success(f"✅ Successfully loaded {len(df)} rows from '{worksheet_name}' ({data_type})")
+                else:
+                    st.warning(f"⚠️ No data found in worksheet '{worksheet_name}' ({data_type})")
+            
+            if not all_data:
+                st.error("❌ No data found in any of the specified worksheets")
+                return None
+            
+            # Merge all data
+            merged_df = pd.concat(all_data, ignore_index=True, sort=False)
+            
+            # Add a unique ID for each row
+            merged_df['row_id'] = range(len(merged_df))
+            
+            st.success(f"🎉 Successfully merged data from {len(all_data)} worksheets. Total rows: {len(merged_df)}")
+            
+            return merged_df
+            
+        except Exception as e:
+            st.error(f"Error fetching data from multiple sheets: {str(e)}")
+            return None
+    
+    def get_sales_funnel_data(self, sheet_id: str) -> Optional[pd.DataFrame]:
+        """
+        Fetch comprehensive sales funnel data from multiple worksheets.
+        
+        WHY: Sales funnel analysis requires data from multiple stages: job applications,
+        proposals sent, contracts signed, etc. This method specifically handles this workflow.
+        
+        HOW: We define the standard sales funnel worksheets and fetch data from each,
+        then merge them with appropriate stage identifiers for funnel analysis.
+        
+        Args:
+            sheet_id (str): The Google Sheet ID
+            
+        Returns:
+            Optional[pd.DataFrame]: Complete sales funnel data, or None if error
+        """
+        try:
+            # Define the sales funnel worksheets and their types
+            funnel_configs = [
+                {'name': 'Scraping Data version 2', 'type': 'job_data'},
+                {'name': 'Proposals Tracking', 'type': 'proposal_data'},
+                # Add more worksheets as needed
+                # {'name': 'Contracts', 'type': 'contract_data'},
+                # {'name': 'Payments', 'type': 'payment_data'},
+            ]
+            
+            # Get data from all worksheets
+            merged_df = self.get_multiple_sheets_data(sheet_id, funnel_configs)
+            
+            if merged_df is not None:
+                # Add funnel stage based on data source
+                def assign_funnel_stage(row):
+                    if row['data_source'] == 'job_data':
+                        return 'Job Application'
+                    elif row['data_source'] == 'proposal_data':
+                        return 'Proposal Sent'
+                    elif row['data_source'] == 'contract_data':
+                        return 'Contract Signed'
+                    elif row['data_source'] == 'payment_data':
+                        return 'Payment Received'
+                    else:
+                        return 'Unknown Stage'
+                
+                merged_df['funnel_stage'] = merged_df.apply(assign_funnel_stage, axis=1)
+                
+                # Add timestamp if not present
+                if 'Date' not in merged_df.columns and 'Member since' in merged_df.columns:
+                    merged_df['Date'] = pd.to_datetime(merged_df['Member since'], errors='coerce')
+                elif 'Date' not in merged_df.columns:
+                    merged_df['Date'] = pd.Timestamp.now()
+                
+                st.info(f"📊 Sales funnel data loaded: {len(merged_df)} total records across {merged_df['funnel_stage'].nunique()} stages")
+                
+            return merged_df
+            
+        except Exception as e:
+            st.error(f"Error fetching sales funnel data: {str(e)}")
+            return None
