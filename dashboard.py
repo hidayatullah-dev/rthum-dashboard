@@ -2003,42 +2003,266 @@ def main():
                 st.plotly_chart(fig_daily, use_container_width=True)
         
         with viz_tab4:
+            st.markdown("#### 📊 Distribution Analysis")
+            st.markdown("""
+            **What this shows:** These charts help you understand how your job opportunities are distributed across different categories and budget ranges.
+            - **Score Distribution:** Shows the quality distribution of jobs in each category
+            - **Amount Spent Distribution:** Shows the budget distribution to identify high-value opportunities
+            """)
+            
             col1, col2 = st.columns(2)
             
             with col1:
-                st.markdown("#### Score Distribution by Category")
-                fig1 = create_safe_chart(df, 'violin', 'Category', 'Score', title='Score Distribution by Category')
-                if fig1:
-                    st.plotly_chart(fig1, use_container_width=True)
+                st.markdown("##### 🎯 Job Quality Score Distribution by Category")
+                st.markdown("""
+                **What this tells you:**
+                - **Wider violin = More variation** in job quality within that category
+                - **Higher position = Better quality** jobs in that category
+                - **Shape shows distribution** of scores (concentrated vs spread out)
+                
+                **How to use it:**
+                - Focus on categories with higher, more consistent scores
+                - Avoid categories with low, scattered scores
+                """)
+                
+                # Create a better violin plot with improved styling
+                if 'Category' in df.columns and 'Score' in df.columns:
+                    # Clean the data first
+                    df_clean = df.dropna(subset=['Category', 'Score'])
+                    df_clean = df_clean[df_clean['Score'] > 0]  # Remove zero scores
+                    
+                    if not df_clean.empty:
+                        # Limit categories to top 10 to avoid overcrowding
+                        top_categories = df_clean['Category'].value_counts().head(10).index
+                        df_clean = df_clean[df_clean['Category'].isin(top_categories)]
+                        
+                        # Create violin plot with better styling
+                        fig1 = px.violin(
+                            df_clean, 
+                            x='Category', 
+                            y='Score',
+                            title='Job Quality Score Distribution by Category',
+                            color='Category',
+                            box=True,  # Add box plot inside violin
+                            points="all",  # Show individual points
+                            hover_data=['Score', 'Amount spent', 'Proposals']
+                        )
+                        
+                        # Improve layout
+                        fig1.update_layout(
+                            title_font_size=16,
+                            xaxis_title="Job Category",
+                            yaxis_title="Quality Score (0-100)",
+                            height=500,
+                            showlegend=False,
+                            xaxis=dict(tickangle=45, tickfont=dict(size=10)),
+                            yaxis=dict(range=[0, 100])
+                        )
+                        
+                        # Add horizontal line for average score
+                        avg_score = df_clean['Score'].mean()
+                        fig1.add_hline(
+                            y=avg_score, 
+                            line_dash="dash", 
+                            line_color="red",
+                            annotation_text=f"Average Score: {avg_score:.1f}"
+                        )
+                        
+                        st.plotly_chart(fig1, use_container_width=True)
+                        
+                        # Add summary statistics
+                        st.markdown("**📈 Category Performance Summary:**")
+                        category_stats = df_clean.groupby('Category')['Score'].agg(['mean', 'count', 'std']).round(1)
+                        category_stats.columns = ['Avg Score', 'Job Count', 'Score Variation']
+                        category_stats = category_stats.sort_values('Avg Score', ascending=False)
+                        st.dataframe(category_stats, use_container_width=True)
+                    else:
+                        st.info("📊 No data available for score distribution analysis")
                 else:
-                    st.info("📊 Chart will appear when data is available")
+                    st.info("📊 Required columns (Category, Score) not found in data")
         
-        with col2:
-                st.markdown("#### Amount Spent Distribution")
-                fig2 = create_safe_chart(df, 'histogram', 'Amount spent', 'Score', 'Category', title='Amount Spent Distribution by Category')
-                if fig2:
-                    st.plotly_chart(fig2, use_container_width=True)
+            with col2:
+                st.markdown("##### 💰 Budget Distribution Analysis")
+                st.markdown("""
+                **What this shows:**
+                - **Budget ranges** where most jobs fall
+                - **High-value opportunities** (jobs with higher budgets)
+                - **Category performance** by budget level
+                
+                **How to use it:**
+                - Target categories with higher budget jobs
+                - Identify budget sweet spots for your applications
+                """)
+                
+                if 'Amount spent' in df.columns and 'Category' in df.columns:
+                    # Clean the data
+                    df_clean = df.dropna(subset=['Amount spent', 'Category'])
+                    df_clean = df_clean[df_clean['Amount spent'] > 0]  # Remove zero amounts
+                    
+                    if not df_clean.empty:
+                        # Create budget distribution chart
+                        fig2 = px.histogram(
+                            df_clean,
+                            x='Amount spent',
+                            color='Category',
+                            title='Budget Distribution by Category',
+                            nbins=20,
+                            hover_data=['Score', 'Proposals']
+                        )
+                        
+                        # Improve layout
+                        fig2.update_layout(
+                            title_font_size=16,
+                            xaxis_title="Budget Amount ($)",
+                            yaxis_title="Number of Jobs",
+                            height=500,
+                            xaxis=dict(tickformat='$,.0f'),
+                            legend=dict(orientation="v", yanchor="top", y=1, xanchor="left", x=1.01)
+                        )
+                        
+                        st.plotly_chart(fig2, use_container_width=True)
+                        
+                        # Add budget statistics
+                        st.markdown("**💰 Budget Analysis Summary:**")
+                        budget_stats = df_clean.groupby('Category')['Amount spent'].agg(['mean', 'median', 'count', 'max']).round(0)
+                        budget_stats.columns = ['Avg Budget', 'Median Budget', 'Job Count', 'Max Budget']
+                        budget_stats = budget_stats.sort_values('Avg Budget', ascending=False)
+                        st.dataframe(budget_stats, use_container_width=True)
+                    else:
+                        st.info("📊 No budget data available for analysis")
                 else:
-                    st.info("📊 Chart will appear when data is available")
+                    st.info("📊 Required columns (Amount spent, Category) not found in data")
         
         with viz_tab5:
+            st.markdown("#### 🔗 Relationship Analysis")
+            st.markdown("""
+            **What this shows:** These charts reveal relationships between different job characteristics to help you identify patterns and opportunities.
+            - **Score vs Budget:** Shows if higher quality jobs tend to have higher budgets
+            - **Correlation Matrix:** Reveals which factors are most related to each other
+            """)
+            
             col1, col2 = st.columns(2)
         
             with col1:
-                st.markdown("#### Score vs Amount Correlation")
-                fig3 = create_safe_chart(df, 'scatter', 'Score', 'Amount spent', 'Category', 'Proposals', title='Score vs Amount (Size=Proposals)')
-                if fig3:
-                    st.plotly_chart(fig3, use_container_width=True)
+                st.markdown("##### 🎯 Job Quality vs Budget Analysis")
+                st.markdown("""
+                **What this tells you:**
+                - **Upward trend = Higher scores** correlate with higher budgets
+                - **Bubble size = Competition level** (more proposals = larger bubble)
+                - **Color = Category** to see which types perform best
+                
+                **How to use it:**
+                - Target jobs in the top-right quadrant (high score + high budget)
+                - Avoid jobs in bottom-left (low score + low budget)
+                """)
+                
+                if 'Score' in df.columns and 'Amount spent' in df.columns:
+                    # Clean the data
+                    df_clean = df.dropna(subset=['Score', 'Amount spent'])
+                    df_clean = df_clean[(df_clean['Score'] > 0) & (df_clean['Amount spent'] > 0)]
+                    
+                    if not df_clean.empty:
+                        # Create scatter plot with better styling
+                        fig3 = px.scatter(
+                            df_clean,
+                            x='Score',
+                            y='Amount spent',
+                            color='Category',
+                            size='Proposals',
+                            title='Job Quality Score vs Budget Analysis',
+                            hover_data=['Job Title', 'Country', 'Proposals', 'Interviewing'],
+                            size_max=20
+                        )
+                        
+                        # Improve layout
+                        fig3.update_layout(
+                            title_font_size=16,
+                            xaxis_title="Quality Score (0-100)",
+                            yaxis_title="Budget Amount ($)",
+                            height=500,
+                            xaxis=dict(range=[0, 100]),
+                            yaxis=dict(tickformat='$,.0f'),
+                            legend=dict(orientation="v", yanchor="top", y=1, xanchor="left", x=1.01)
+                        )
+                        
+                        # Add trend line
+                        fig3.add_trace(px.scatter(df_clean, x='Score', y='Amount spent', trendline="ols").data[1])
+                        
+                        st.plotly_chart(fig3, use_container_width=True)
+                        
+                        # Add correlation analysis
+                        correlation = df_clean['Score'].corr(df_clean['Amount spent'])
+                        st.markdown(f"**📊 Correlation Coefficient:** {correlation:.3f}")
+                        if correlation > 0.3:
+                            st.success("✅ Strong positive correlation: Higher scores tend to have higher budgets")
+                        elif correlation > 0.1:
+                            st.info("ℹ️ Moderate positive correlation: Some relationship between score and budget")
+                        else:
+                            st.warning("⚠️ Weak correlation: Score and budget are not strongly related")
+                    else:
+                        st.info("📊 No data available for correlation analysis")
                 else:
-                    st.info("📊 Chart will appear when data is available")
+                    st.info("📊 Required columns (Score, Amount spent) not found in data")
         
             with col2:
-                st.markdown("#### Correlation Heatmap")
-                fig4 = create_safe_chart(df, 'heatmap', 'Score', 'Amount spent', 'Category', title='Correlation Matrix')
-                if fig4:
-                    st.plotly_chart(fig4, use_container_width=True)
+                st.markdown("##### 📈 Multi-Factor Correlation Matrix")
+                st.markdown("""
+                **What this shows:**
+                - **Color intensity = Correlation strength** (darker = stronger relationship)
+                - **Red = Positive correlation** (factors increase together)
+                - **Blue = Negative correlation** (one increases, other decreases)
+                
+                **How to use it:**
+                - Look for strong correlations to understand job patterns
+                - Use this to predict job characteristics
+                """)
+                
+                if 'Score' in df.columns and 'Amount spent' in df.columns and 'Proposals' in df.columns:
+                    # Create correlation matrix
+                    numeric_cols = ['Score', 'Amount spent', 'Proposals', 'Interviewing', 'Active hires']
+                    available_cols = [col for col in numeric_cols if col in df.columns]
+                    
+                    if len(available_cols) > 1:
+                        df_clean = df[available_cols].dropna()
+                        
+                        if not df_clean.empty:
+                            # Calculate correlation matrix
+                            corr_matrix = df_clean.corr()
+                            
+                            # Create heatmap
+                            fig4 = px.imshow(
+                                corr_matrix,
+                                title='Correlation Matrix: Job Characteristics',
+                                color_continuous_scale='RdBu',
+                                aspect="auto",
+                                text_auto=True
+                            )
+                            
+                            # Improve layout
+                            fig4.update_layout(
+                                title_font_size=16,
+                                height=500,
+                                xaxis_title="Job Characteristics",
+                                yaxis_title="Job Characteristics"
+                            )
+                            
+                            st.plotly_chart(fig4, use_container_width=True)
+                            
+                            # Add interpretation
+                            st.markdown("**🔍 Key Insights:**")
+                            for i, col1 in enumerate(available_cols):
+                                for j, col2 in enumerate(available_cols):
+                                    if i < j:  # Only show upper triangle
+                                        corr_val = corr_matrix.loc[col1, col2]
+                                        if abs(corr_val) > 0.5:
+                                            direction = "increases with" if corr_val > 0 else "decreases with"
+                                            st.write(f"• **{col1}** {direction} **{col2}** (r = {corr_val:.2f})")
+                        else:
+                            st.info("📊 No data available for correlation matrix")
+                    else:
+                        st.info("📊 Need at least 2 numeric columns for correlation analysis")
                 else:
-                    st.info("📊 Chart will appear when data is available")
+                    st.info("📊 Required numeric columns not found in data")
     
     elif page == "📈 Business Plan":
         create_business_plan_analysis()
