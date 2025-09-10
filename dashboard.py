@@ -1401,42 +1401,42 @@ def main():
                 st.plotly_chart(fig_weekly, use_container_width=True)
             
             # Daily average chart
-            st.markdown("##### Daily Average Applications vs Goals")
+                st.markdown("##### Daily Average Applications vs Goals")
+                
+                # Create daily average data
+                daily_avg_data = weekly_data.copy()
+                daily_avg_data['Daily_Avg'] = daily_avg_data['Applications'] / 7  # Convert weekly to daily average
+                daily_avg_data['Daily_Goal'] = 11  # Daily application goal
             
-            # Create daily average data
-            daily_avg_data = weekly_data.copy()
-            daily_avg_data['Daily_Avg'] = daily_avg_data['Applications'] / 7  # Convert weekly to daily average
-            daily_avg_data['Daily_Goal'] = 11  # Daily application goal
+                fig_daily = go.Figure()
+                
+                # Add daily average bar
+                fig_daily.add_trace(go.Bar(
+                    name='Average Job Applications per Day',
+                    x=daily_avg_data['Week'],
+                    y=daily_avg_data['Daily_Avg'],
+                    marker_color='lightblue',
+                    marker_line=dict(color='blue', width=1)
+                ))
+                
+                # Add daily goal line
+                fig_daily.add_trace(go.Scatter(
+                    name='Daily Goal',
+                    x=daily_avg_data['Week'],
+                    y=daily_avg_data['Daily_Goal'],
+                    mode='lines',
+                    line=dict(color='red', width=3)
+                ))
             
-            fig_daily = go.Figure()
-            
-            # Add daily average bar
-            fig_daily.add_trace(go.Bar(
-                name='Average Job Applications per Day',
-                x=daily_avg_data['Week'],
-                y=daily_avg_data['Daily_Avg'],
-                marker_color='lightblue',
-                marker_line=dict(color='blue', width=1)
-            ))
-            
-            # Add daily goal line
-            fig_daily.add_trace(go.Scatter(
-                name='Daily Goal',
-                x=daily_avg_data['Week'],
-                y=daily_avg_data['Daily_Goal'],
-                mode='lines',
-                line=dict(color='red', width=3)
-            ))
-            
-            fig_daily.update_layout(
-                title='Average Job Applications per Day vs Goals',
-                xaxis_title='Week',
-                yaxis_title='Applications per Day',
-                height=400,
-                showlegend=True
-            )
-            
-            st.plotly_chart(fig_daily, use_container_width=True)
+                fig_daily.update_layout(
+                    title='Average Job Applications per Day vs Goals',
+                    xaxis_title='Week',
+                    yaxis_title='Applications per Day',
+                    height=400,
+                    showlegend=True
+                )
+                
+                st.plotly_chart(fig_daily, use_container_width=True)
         
         with viz_tab3:
             st.markdown("#### ⏰ Time Analysis & Activity Patterns")
@@ -1511,16 +1511,16 @@ def main():
             with col1:
                 st.markdown("#### Score Distribution by Category")
                 fig1 = create_safe_chart(df, 'violin', 'Category', 'Score', title='Score Distribution by Category')
-            if fig1:
-                st.plotly_chart(fig1, use_container_width=True)
+                if fig1:
+                    st.plotly_chart(fig1, use_container_width=True)
                 else:
                     st.info("📊 Chart will appear when data is available")
         
-        with col2:
+            with col2:
                 st.markdown("#### Amount Spent Distribution")
                 fig2 = create_safe_chart(df, 'histogram', 'Amount spent', 'Score', 'Category', title='Amount Spent Distribution by Category')
-            if fig2:
-                st.plotly_chart(fig2, use_container_width=True)
+                if fig2:
+                    st.plotly_chart(fig2, use_container_width=True)
                 else:
                     st.info("📊 Chart will appear when data is available")
         
@@ -1530,16 +1530,16 @@ def main():
             with col1:
                 st.markdown("#### Score vs Amount Correlation")
                 fig3 = create_safe_chart(df, 'scatter', 'Score', 'Amount spent', 'Category', 'Proposals', title='Score vs Amount (Size=Proposals)')
-            if fig3:
-                st.plotly_chart(fig3, use_container_width=True)
+                if fig3:
+                    st.plotly_chart(fig3, use_container_width=True)
                 else:
                     st.info("📊 Chart will appear when data is available")
         
             with col2:
                 st.markdown("#### Correlation Heatmap")
                 fig4 = create_safe_chart(df, 'heatmap', 'Score', 'Amount spent', 'Category', title='Correlation Matrix')
-            if fig4:
-                st.plotly_chart(fig4, use_container_width=True)
+                if fig4:
+                    st.plotly_chart(fig4, use_container_width=True)
                 else:
                     st.info("📊 Chart will appear when data is available")
     
