@@ -11,6 +11,10 @@ from plotly.subplots import make_subplots
 import time
 from datetime import datetime, timedelta
 from google_sheets_connector import GoogleSheetsConnector
+from analytics_engine import UpworkAnalyticsEngine
+from visualization_engine import UpworkVisualizationEngine
+from proposal_tracking_engine import ProposalTrackingEngine
+from proposal_visualization_engine import ProposalVisualizationEngine
 from config import *
 import os
 import numpy as np
@@ -118,6 +122,36 @@ def load_data():
             
     except Exception as e:
         st.error(f"❌ Error loading data: {str(e)}")
+        return None
+
+def load_proposal_data():
+    """Load proposal tracking data from Google Sheets."""
+    try:
+        if (st.session_state.data_cache is not None and 
+            st.session_state.cache_timestamp is not None and 
+            not should_refresh_data()):
+            return st.session_state.data_cache
+        
+        credentials_path = "service_account_credentials.json"
+        
+        if not os.path.exists(credentials_path):
+            st.error(f"❌ Service account credentials file not found: {credentials_path}")
+            return None
+        
+        connector = GoogleSheetsConnector(credentials_path)
+        df = connector.get_sheet_data(SHEET_ID, PROPOSAL_TRACKING_SHEET)
+        
+        if df is not None:
+            st.session_state.data_cache = df
+            st.session_state.cache_timestamp = datetime.now()
+            st.session_state.last_refresh = datetime.now()
+            return df
+        else:
+            st.error("❌ Failed to load proposal tracking data from Google Sheets")
+            return None
+            
+    except Exception as e:
+        st.error(f"❌ Error loading proposal data: {str(e)}")
         return None
 
 def clean_and_enhance_data(df):
@@ -560,7 +594,7 @@ def main():
         st.markdown("### 🧭 Navigation")
         page = st.selectbox(
             "Select Page:",
-            ["📊 Overview", "🧪 Experiments", "🧮 Formulas", "📊 Chart Builder"]
+            ["📊 Overview", "📈 Time Analytics", "📊 Status Analysis", "🎯 Advanced Analytics", "💼 Proposal Tracking", "🧪 Experiments", "🧮 Formulas", "📊 Chart Builder"]
         )
     
     # Load data
@@ -574,10 +608,29 @@ def main():
     last_refresh_str = st.session_state.last_refresh.strftime("%Y-%m-%d %H:%M:%S")
     st.markdown(f'<div class="refresh-info">🔄 Last refreshed: {last_refresh_str}</div>', unsafe_allow_html=True)
     
+    # Initialize analytics engines
+    analytics_engine = UpworkAnalyticsEngine(df)
+    viz_engine = UpworkVisualizationEngine()
+    
+    # Load proposal tracking data if needed
+    proposal_df = None
+    if page == "💼 Proposal Tracking":
+        proposal_df = load_proposal_data()
+        if proposal_df is not None:
+            proposal_engine = ProposalTrackingEngine(proposal_df)
+            proposal_viz_engine = ProposalVisualizationEngine()
+    
     # Main content based on page selection
     if page == "📊 Overview":
-        # Advanced metrics
-        create_advanced_metrics(df)
+        # Real-time metrics
+        real_time_metrics = analytics_engine.get_real_time_metrics()
+        viz_engine.create_real_time_metrics_display(real_time_metrics)
+        
+        # Conversion funnel
+        st.subheader("🔄 Conversion Funnel")
+        funnel_data = analytics_engine.get_conversion_funnel()
+        funnel_chart = viz_engine.create_conversion_funnel_chart(funnel_data)
+        st.plotly_chart(funnel_chart, use_container_width=True)
         
         # Quick charts
         st.subheader("📈 Quick Insights")
@@ -590,9 +643,10 @@ def main():
                 st.plotly_chart(fig1, use_container_width=True)
         
         with col2:
-            fig2 = create_safe_chart(df, 'pie', 'Country', 'Score', title='Jobs by Country')
-            if fig2:
-                st.plotly_chart(fig2, use_container_width=True)
+            country_data = analytics_engine.get_country_analysis(top_n=10)
+            if not country_data.empty:
+                country_chart = viz_engine.create_country_analysis_chart(country_data)
+                st.plotly_chart(country_chart, use_container_width=True)
         
         col3, col4 = st.columns(2)
         
@@ -605,6 +659,169 @@ def main():
             fig4 = create_safe_chart(df, 'box', 'Score_Category', 'Amount spent', title='Amount Distribution by Score')
             if fig4:
                 st.plotly_chart(fig4, use_container_width=True)
+    
+    elif page == "📈 Time Analytics":
+        st.subheader("📈 Time-Based Analytics")
+        
+        # Weekly job counts
+        st.markdown("### 📊 Weekly Job Scraping Performance")
+        weekly_data = analytics_engine.get_weekly_job_counts()
+        if not weekly_data.empty:
+            weekly_chart = viz_engine.create_weekly_jobs_chart(weekly_data)
+            st.plotly_chart(weekly_chart, use_container_width=True)
+        else:
+            st.warning("No weekly data available. Please check your Publish Date column.")
+        
+        # Daily job counts
+        st.markdown("### 📅 Daily Job Scraping Activity")
+        daily_data = analytics_engine.get_daily_job_counts()
+        if not daily_data.empty:
+            daily_chart = viz_engine.create_daily_jobs_chart(daily_data)
+            st.plotly_chart(daily_chart, use_container_width=True)
+        else:
+            st.warning("No daily data available. Please check your Publish Date column.")
+        
+        # Hourly distribution
+        st.markdown("### 🕐 Hourly Distribution of Job Postings")
+        hourly_data = analytics_engine.get_hourly_distribution()
+        if not hourly_data.empty:
+            hourly_chart = viz_engine.create_hourly_distribution_chart(hourly_data)
+            st.plotly_chart(hourly_chart, use_container_width=True)
+        else:
+            st.warning("No hourly data available. Please check your Publish Date column.")
+    
+    elif page == "📊 Status Analysis":
+        st.subheader("📊 Application Status Analysis")
+        
+        # Weekly status breakdown
+        st.markdown("### 📊 Weekly Application Status Breakdown")
+        status_data = analytics_engine.get_status_breakdown_weekly()
+        if not status_data.empty:
+            status_chart = viz_engine.create_status_breakdown_chart(status_data)
+            st.plotly_chart(status_chart, use_container_width=True)
+        else:
+            st.warning("No status data available. Please check your Application Status column.")
+        
+        # Status summary
+        if COLUMNS['application_status_column'] in df.columns:
+            st.markdown("### 📋 Status Summary")
+            status_summary = df[COLUMNS['application_status_column']].value_counts()
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.dataframe(status_summary.reset_index().rename(columns={'index': 'Status', COLUMNS['application_status_column']: 'Count'}))
+            
+            with col2:
+                # Status pie chart
+                fig = px.pie(
+                    values=status_summary.values,
+                    names=status_summary.index,
+                    title="Status Distribution",
+                    color_discrete_sequence=px.colors.qualitative.Set3
+                )
+                st.plotly_chart(fig, use_container_width=True)
+    
+    elif page == "🎯 Advanced Analytics":
+        st.subheader("🎯 Advanced Analytics")
+        
+        # ICP Analysis
+        st.markdown("### 🎯 ICP (Ideal Customer Profile) Analysis")
+        icp_data = analytics_engine.get_icp_analysis()
+        if "error" not in icp_data:
+            icp_chart = viz_engine.create_icp_analysis_chart(icp_data)
+            st.plotly_chart(icp_chart, use_container_width=True)
+        else:
+            st.warning(f"ICP Analysis: {icp_data['error']}")
+        
+        # Experience Level Analysis
+        st.markdown("### 👥 Experience Level Distribution")
+        exp_data = analytics_engine.get_experience_level_distribution()
+        if not exp_data.empty:
+            exp_chart = viz_engine.create_experience_level_chart(exp_data)
+            st.plotly_chart(exp_chart, use_container_width=True)
+        else:
+            st.warning("No experience level data available.")
+        
+        # Hourly Rate Analysis
+        st.markdown("### 💰 Hourly Rate Analysis")
+        rate_data = analytics_engine.get_hourly_rate_analysis()
+        if "error" not in rate_data:
+            rate_chart = viz_engine.create_hourly_rate_chart(rate_data)
+            st.plotly_chart(rate_chart, use_container_width=True)
+        else:
+            st.warning(f"Hourly Rate Analysis: {rate_data['error']}")
+        
+        # Country Analysis
+        st.markdown("### 🌍 Geographic Analysis")
+        country_data = analytics_engine.get_country_analysis(top_n=15)
+        if not country_data.empty:
+            country_chart = viz_engine.create_country_analysis_chart(country_data)
+            st.plotly_chart(country_chart, use_container_width=True)
+        else:
+            st.warning("No country data available.")
+    
+    elif page == "💼 Proposal Tracking":
+        if proposal_df is None:
+            st.error("❌ Unable to load proposal tracking data. Please check your configuration and credentials.")
+        else:
+            st.subheader("💼 Proposal Tracking Dashboard")
+            
+            # Get all proposal tracking data
+            baseline_data = proposal_engine.get_baseline_2025_data()
+            outbound_goals = proposal_engine.get_outbound_monthly_goals()
+            inbound_goals = proposal_engine.get_inbound_monthly_goals()
+            daily_targets = proposal_engine.get_daily_activity_targets()
+            performance_data = proposal_engine.get_performance_tracking()
+            advanced_data = proposal_engine.get_advanced_analytics()
+            dashboard_summary = proposal_engine.get_dashboard_summary()
+            
+            # Baseline 2025 Data Section
+            st.markdown("### 📊 Baseline 2025 Data")
+            proposal_viz_engine.create_baseline_metrics_display(baseline_data)
+            
+            # Conversion Funnel
+            st.markdown("### 🔄 Conversion Funnel")
+            funnel_chart = proposal_viz_engine.create_conversion_funnel_chart(baseline_data)
+            st.plotly_chart(funnel_chart, use_container_width=True)
+            
+            # Outbound and Inbound Goals
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.markdown("### 🎯 Outbound Monthly Goals (90%)")
+                outbound_chart = proposal_viz_engine.create_outbound_goals_chart(outbound_goals)
+                st.plotly_chart(outbound_chart, use_container_width=True)
+            
+            with col2:
+                st.markdown("### 📈 Inbound Monthly Goals (90%)")
+                inbound_chart = proposal_viz_engine.create_inbound_goals_chart(inbound_goals)
+                st.plotly_chart(inbound_chart, use_container_width=True)
+            
+            # Daily Activity Targets
+            st.markdown("### 📅 Daily Activity Targets")
+            daily_chart = proposal_viz_engine.create_daily_targets_chart(daily_targets)
+            st.plotly_chart(daily_chart, use_container_width=True)
+            
+            # Performance Tracking
+            st.markdown("### 📊 Performance Tracking (Actual vs Target)")
+            performance_chart = proposal_viz_engine.create_performance_tracking_chart(performance_data)
+            st.plotly_chart(performance_chart, use_container_width=True)
+            
+            # Advanced Analytics
+            st.markdown("### 🚀 Advanced Analytics & Forecasting")
+            advanced_chart = proposal_viz_engine.create_advanced_analytics_chart(advanced_data)
+            st.plotly_chart(advanced_chart, use_container_width=True)
+            
+            # Financial Summary
+            proposal_viz_engine.create_financial_summary_display(dashboard_summary)
+            
+            # Data table
+            with st.expander("📋 Proposal Tracking Data Table"):
+                st.dataframe(
+                    proposal_df,
+                    use_container_width=True,
+                    height=400
+                )
     
     elif page == "🧪 Experiments":
         create_experiment_interface(df)
